@@ -30,43 +30,44 @@ Requirements
 
     Spotify API credentials (optional)
 
-Dependencies
-
-pip install spotipy mutagen pillow requests
-
-Setup
-
-python setup.py
+Run the launcher script:
+python run.py
 
 🖱️ Usage
 
-    Launch the GUI:
-
-    python gui/main.py
-
-    Paste a Spotify playlist or YouTube video/playlist URL.
-
-    Click Start to begin downloading.
-
-    Watch the progress bar, logs, and cover art preview update in real time.
+git clone https://github.com/dansanya14/dansanya14-audio-protocol.git
+cd dansanya14-audio-protocol
 
 🧠 Architecture
 
 dansanya14-audio-protocol/
 ├── config.py
 ├── downloader/
+│   └── _init_.py
 │   ├── spotify.py
 │   ├── youtube.py
 │   ├── metadata.py
+│   ├── logger.py
 │   ├── lyrics.py
 │   ├── thumbnails.py
+│   ├── organizer.py
 │   ├── retry.py
 │   ├── cache.py
+│   └── config.py
+│   └── controller.py
 │   └── debug.py
 ├── gui/
+│   └── _init_.py
+│   └── cache_cleaner.py
+│   └── controller.py
+│   └── interface.py
 │   ├── main.py
 │   └── logger.py
+├── LICENSE.py
+├── Requirements.py
 ├── setup.py
+├── startup_check.py
+├── run.py
 ├── README.md
 
     Modular design: Each feature lives in its own focused module.
@@ -74,3 +75,4 @@ dansanya14-audio-protocol/
     Fallback-first: Works even without API keys or manual setup.
 
     Installer-grade polish: Setup script checks dependencies and guides the user.
+
