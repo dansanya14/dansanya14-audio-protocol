@@ -76,3 +76,35 @@ dansanya14-audio-protocol/
 
     Installer-grade polish: Setup script checks dependencies and guides the user.
 
+Demo
+
+Here’s what the Dansanya14 Audio Protocol GUI looks like in action:
+
++-------------------------------------------------------------+
+| Dansanya14 Audio Protocol                                   |
++-------------------------------------------------------------+
+| Platform: [ Spotify ▼ ]   Playlist/Video URL: [__________]  |
++-------------------------------------------------------------+
+| [ Start ] [ Pause ] [ Resume ] [ Cancel ]                   |
++-------------------------------------------------------------+
+
++-------------------------------------------------------------+
+
++-------------------------------------------------------------+
+
+
+### What you see:
+- **Progress bar** with percentage complete  
+- **Status label** (Idle, Downloading, Paused, Cancelled, Complete, Error)  
+- **Elapsed time, ETA, and Speed** (MB/s for YouTube, tracks/minute for Spotify)  
+- **Real‑time logs** with color‑coded messages (blue INFO, green SUCCESS, orange WARNING, red ERROR)  
+
+---
+
+### 🎥 Typical Workflow
+1. Paste a Spotify playlist or YouTube link.  
+2. Hit **Start** — the GUI stays responsive while downloads run in the background.  
+3. Watch logs update in real time with thumbnails, metadata, and lyrics embedding.  
+4. Pause, resume, or cancel anytime.  
+5. Enjoy clean, tagged FLAC files with embedded cover art and captions.  
+
