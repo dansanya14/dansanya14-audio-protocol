@@ -5,6 +5,7 @@ from downloader.metadata import tag_audio
 from gui.logger import log_message
 from config import DOWNLOAD_DIR
 from mutagen.flac import FLAC
+from downloader.thumbnails import extract_video_id, download_thumbnail, embed_thumbnail
 import subprocess, os, shutil, time, json, re, glob
 
 SPOTIFY_CLIENT_ID = "your-client-id"
@@ -66,6 +67,15 @@ def find_latest_flac():
     files = glob.glob(os.path.join(DOWNLOAD_DIR, "*.flac"))
     return max(files, key=os.path.getctime) if files else None
 
+def clean_title(raw: str) -> str:
+    cleaned = re.sub(r"
+
+    \[.*?\]
+
+    |\(.*?\)", "", raw)
+    cleaned = re.sub(r"\b(official|video|lyrics|HD|4K|remastered)\b", "", cleaned, flags=re.IGNORECASE)
+    return " ".join(cleaned.split()).strip()
+
 def download_spotify(playlist_url: str, controller, log_box=None):
     log_message(log_box, "Starting Spotify download...", "INFO")
     try:
@@ -93,6 +103,11 @@ def download_spotify(playlist_url: str, controller, log_box=None):
             ["yt-dlp", f"ytsearch1:{search_query}", "--print", "url"],
             capture_output=True, text=True
         ).stdout.strip()
+
+        if not resolved_url or "youtube.com" not in resolved_url:
+            log_message(log_box, f"No YouTube match found for {search_query}. Skipping track.", "WARNING")
+            continue
+
         log_message(log_box, f"Resolved YouTube URL: {resolved_url}", "INFO")
 
         def action():
@@ -115,8 +130,24 @@ def download_spotify(playlist_url: str, controller, log_box=None):
         if retry(action, f"Download {search_query}", log_box):
             flac_file = find_latest_flac()
             if flac_file:
-                tag_audio(flac_file, track)
+                # Embed thumbnail
+                video_id = extract_video_id(resolved_url)
+                image_data = download_thumbnail(video_id)
+                if image_data:
+                    embed_thumbnail(flac_file, image_data)
+                    log_message(log_box, f"Thumbnail embedded for {track['title']}", "SUCCESS")
+                else:
+                    log_message(log_box, f"No thumbnail found for {track['title']}", "WARNING")
 
+                # Clean title and tag metadata
+                cleaned_title = clean_title(track["title"])
+                tag_audio(flac_file, {
+                    "title": cleaned_title,
+                    "artist": track["artist"],
+                    "album": track["album"]
+                })
+
+                # Embed lyrics
                 srt_path = flac_file.replace(".flac", ".en.srt")
                 lyrics = extract_clean_captions(srt_path)
                 if lyrics:

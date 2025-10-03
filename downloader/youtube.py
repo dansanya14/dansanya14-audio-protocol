@@ -1,11 +1,11 @@
-# Manages the YouTube download
-
-import subprocess, os, shutil, glob, json, re
 from downloader.retry import retry
 from downloader.metadata import tag_audio
+from downloader.lyrics import extract_clean_captions
+from downloader.thumbnails import extract_video_id, download_thumbnail, embed_thumbnail
 from gui.logger import log_message
 from config import DOWNLOAD_DIR
 from mutagen.flac import FLAC
+import subprocess, os, shutil, time, json, re, glob
 
 def get_ffmpeg_location():
     if shutil.which("ffmpeg") and shutil.which("ffprobe"):
@@ -28,68 +28,84 @@ def has_manual_subs(video_url: str, lang="en") -> bool:
     except Exception:
         return False
 
-def extract_clean_captions(srt_path: str) -> str:
-    if not os.path.exists(srt_path):
-        return ""
-    with open(srt_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    text_lines = []
-    for line in lines:
-        line = line.strip()
-        if re.match(r"^\d+$", line): continue
-        if re.match(r"^\d{2}:\d{2}:\d{2},\d{3}", line): continue
-        if line: text_lines.append(line)
-    return "\n".join(text_lines)
-
-def infer_title_artist(filename: str):
-    base = os.path.splitext(os.path.basename(filename))[0]
-    if " - " in base:
-        artist, title = base.split(" - ", 1)
-    else:
-        artist, title = "Unknown", base
-    return title.strip(), artist.strip()
-
 def find_latest_flac():
     files = glob.glob(os.path.join(DOWNLOAD_DIR, "*.flac"))
     return max(files, key=os.path.getctime) if files else None
 
-def download_youtube(video_url: str, controller, log_box=None):
-    log_message(log_box, "Starting YouTube download...", "INFO")
+def clean_title(raw: str) -> str:
+    cleaned = re.sub(r"
 
-    output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+    \[.*?\]
+
+    |\(.*?\)", "", raw)
+    cleaned = re.sub(r"\b(official|video|lyrics|HD|4K|remastered)\b", "", cleaned, flags=re.IGNORECASE)
+    return " ".join(cleaned.split()).strip()
+
+def download_youtube(video_urls: list[str], controller, log_box=None):
+    log_message(log_box, "Starting batch YouTube download...", "INFO")
     ffmpeg_location = get_ffmpeg_location()
+    output_template = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+    total = len(video_urls)
 
-    def action():
-        command = [
-            "yt-dlp", video_url,
-            "-x", "--audio-format", "flac",
-            "-o", output_path
-        ]
-        if ffmpeg_location:
-            command += ["--ffmpeg-location", ffmpeg_location]
+    for index, video_url in enumerate(video_urls):
+        if not controller.should_continue():
+            log_message(log_box, "Batch cancelled.", "WARNING")
+            break
+        while controller.paused:
+            log_message(log_box, "Paused...", "INFO")
+            time.sleep(1)
 
-        if has_manual_subs(video_url, lang="en"):
-            command += ["--write-subs", "--sub-langs", "en", "--convert-subs", "srt"]
-            log_message(log_box, "Owner-uploaded captions detected. Capturing subtitles...", "INFO")
-        else:
-            log_message(log_box, "No owner-uploaded captions found. Skipping subtitles.", "INFO")
+        log_message(log_box, f"Downloading {video_url} ({index+1}/{total})", "INFO")
 
-        subprocess.run(command, check=True)
+        def action():
+            command = [
+                "yt-dlp", video_url,
+                "-x", "--audio-format", "flac",
+                "-o", output_template
+            ]
+            if ffmpeg_location:
+                command += ["--ffmpeg-location", ffmpeg_location]
 
-    if retry(action, f"Download {video_url}", log_box):
-        flac_file = find_latest_flac()
-        if flac_file:
-            title, artist = infer_title_artist(flac_file)
-            tag_audio(flac_file, {"title": title, "artist": artist, "album": "YouTube"})
-
-            srt_path = flac_file.replace(".flac", ".en.srt")
-            lyrics = extract_clean_captions(srt_path)
-            if lyrics:
-                audio = FLAC(flac_file)
-                audio["LYRICS"] = f"[Source: YouTube captions]\n\n{lyrics}"
-                audio.save()
-                log_message(log_box, f"Lyrics embedded from YouTube captions for {title}", "SUCCESS")
+            if has_manual_subs(video_url, lang="en"):
+                command += ["--write-subs", "--sub-langs", "en", "--convert-subs", "srt"]
+                log_message(log_box, "Captions found. Downloading subtitles...", "INFO")
             else:
-                log_message(log_box, f"No usable captions found for {title}", "WARNING")
-        else:
-            log_message(log_box, "Download complete, but FLAC file not found.", "WARNING")
+                log_message(log_box, "No owner-uploaded captions. Skipping subtitles.", "INFO")
+
+            subprocess.run(command, check=True)
+
+        if retry(action, f"Download {video_url}", log_box):
+            flac_path = find_latest_flac()
+            if flac_path:
+                # Embed thumbnail
+                video_id = extract_video_id(video_url)
+                image_data = download_thumbnail(video_id)
+                if image_data:
+                    embed_thumbnail(flac_path, image_data)
+                    log_message(log_box, "Thumbnail embedded.", "SUCCESS")
+                else:
+                    log_message(log_box, "No thumbnail found.", "WARNING")
+
+                # Clean title and tag metadata
+                raw_title = os.path.splitext(os.path.basename(flac_path))[0]
+                cleaned_title = clean_title(raw_title)
+                tag_audio(flac_path, {
+                    "title": cleaned_title,
+                    "artist": "YouTube",
+                    "album": "YouTube Downloads"
+                })
+
+                # Embed lyrics
+                srt_path = flac_path.replace(".flac", ".en.srt")
+                lyrics = extract_clean_captions(srt_path)
+                if lyrics:
+                    audio = FLAC(flac_path)
+                    audio["LYRICS"] = f"[Source: YouTube captions]\n\n{lyrics}"
+                    audio.save()
+                    log_message(log_box, "Lyrics embedded from YouTube captions.", "SUCCESS")
+                else:
+                    log_message(log_box, "No usable captions found.", "WARNING")
+
+                controller.update_progress((index + 1) / total)
+            else:
+                log_message(log_box, "Download complete, but FLAC file not found.", "WARNING")
