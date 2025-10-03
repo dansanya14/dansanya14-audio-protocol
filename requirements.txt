@@ -1,0 +1,8 @@
+Package			Purpose
+spotipy			Access Spotify playlists and track metadata
+yt-dlp			Download YouTube videos and audio
+mutagen			Edit FLAC metadata (title, artist, genre)
+requests		General-purpose HTTP requests (e.g. APIs)
+colorama 		print colored and styled text in the terminal across Windows, macOS, and Linux.
+lyricsgenius		Optional: fetch lyrics from Genius API
+pygame			Optional: audio playback or preview
