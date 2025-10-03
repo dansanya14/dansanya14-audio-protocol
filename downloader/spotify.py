@@ -1,5 +1,3 @@
-# Manages the Spotify download
-
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
 from downloader.retry import retry
@@ -7,9 +5,8 @@ from downloader.metadata import tag_audio
 from gui.logger import log_message
 from config import DOWNLOAD_DIR
 from mutagen.flac import FLAC
-import subprocess, os, shutil, time, json, re
+import subprocess, os, shutil, time, json, re, glob
 
-# Replace with your actual credentials or use fallback logic
 SPOTIFY_CLIENT_ID = "your-client-id"
 SPOTIFY_CLIENT_SECRET = "your-client-secret"
 
@@ -65,6 +62,10 @@ def extract_clean_captions(srt_path: str) -> str:
         if line: text_lines.append(line)
     return "\n".join(text_lines)
 
+def find_latest_flac():
+    files = glob.glob(os.path.join(DOWNLOAD_DIR, "*.flac"))
+    return max(files, key=os.path.getctime) if files else None
+
 def download_spotify(playlist_url: str, controller, log_box=None):
     log_message(log_box, "Starting Spotify download...", "INFO")
     try:
@@ -74,8 +75,9 @@ def download_spotify(playlist_url: str, controller, log_box=None):
         return
 
     ffmpeg_location = get_ffmpeg_location()
+    total_tracks = len(tracks)
 
-    for track in tracks:
+    for index, track in enumerate(tracks):
         if not controller.should_continue():
             log_message(log_box, "Download cancelled.", "WARNING")
             break
@@ -84,19 +86,25 @@ def download_spotify(playlist_url: str, controller, log_box=None):
             time.sleep(1)
 
         search_query = f"{track['artist']} - {track['title']}"
-        output_path = os.path.join(DOWNLOAD_DIR, f"{track['title']}.flac")
+        output_template = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+
+        # Resolve actual video URL
+        resolved_url = subprocess.run(
+            ["yt-dlp", f"ytsearch1:{search_query}", "--print", "url"],
+            capture_output=True, text=True
+        ).stdout.strip()
+        log_message(log_box, f"Resolved YouTube URL: {resolved_url}", "INFO")
 
         def action():
             command = [
-                "yt-dlp", f"ytsearch1:{search_query}",
+                "yt-dlp", resolved_url,
                 "-x", "--audio-format", "flac",
-                "-o", output_path
+                "-o", output_template
             ]
             if ffmpeg_location:
                 command += ["--ffmpeg-location", ffmpeg_location]
 
-            # Check if owner-uploaded captions exist
-            if has_manual_subs(f"ytsearch1:{search_query}", lang="en"):
+            if has_manual_subs(resolved_url, lang="en"):
                 command += ["--write-subs", "--sub-langs", "en", "--convert-subs", "srt"]
                 log_message(log_box, f"Captions found for {search_query}. Downloading subtitles...", "INFO")
             else:
@@ -105,14 +113,20 @@ def download_spotify(playlist_url: str, controller, log_box=None):
             subprocess.run(command, check=True)
 
         if retry(action, f"Download {search_query}", log_box):
-            tag_audio(output_path, track)
+            flac_file = find_latest_flac()
+            if flac_file:
+                tag_audio(flac_file, track)
 
-            srt_path = output_path.replace(".flac", ".en.srt")
-            lyrics = extract_clean_captions(srt_path)
-            if lyrics:
-                audio = FLAC(output_path)
-                audio["LYRICS"] = f"[Source: YouTube captions]\n\n{lyrics}"
-                audio.save()
-                log_message(log_box, f"Lyrics embedded from YouTube captions for {track['title']}", "SUCCESS")
+                srt_path = flac_file.replace(".flac", ".en.srt")
+                lyrics = extract_clean_captions(srt_path)
+                if lyrics:
+                    audio = FLAC(flac_file)
+                    audio["LYRICS"] = f"[Source: YouTube captions]\n\n{lyrics}"
+                    audio.save()
+                    log_message(log_box, f"Lyrics embedded from YouTube captions for {track['title']}", "SUCCESS")
+                else:
+                    log_message(log_box, f"No usable captions found for {track['title']}", "WARNING")
+
+                controller.update_progress((index + 1) / total_tracks)
             else:
-                log_message(log_box, f"No usable captions found for {track['title']}", "WARNING")
+                log_message(log_box, "Download complete, but FLAC file not found.", "WARNING")
