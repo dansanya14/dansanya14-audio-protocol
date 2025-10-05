@@ -1,0 +1,50 @@
+==========================
+ Log Outcome Taxonomy
+==========================
+
+Track-Level Outcomes
+--------------------
+SUCCESS
+  - Prefix: [SUCCESS]
+  - Meaning: Track fully downloaded, converted to FLAC, tagged, thumbnail + captions embedded if available.
+  - Example: [SUCCESS] Downloaded and tagged: Thomas Bergersen - Elysium
+
+FAILED
+  - Prefix: [ERROR]
+  - Meaning: Track could not be resolved, download failed, or conversion/tagging crashed.
+  - Example: [ERROR] Failed to download: Audiomachine - Guardians at the Gate (no YouTube match)
+
+SKIPPED
+  - Prefix: [WARNING]
+  - Meaning: Track intentionally skipped (already exists, user cancelled, or unsupported format like Shorts).
+  - Example: [WARNING] File already exists: Two Steps From Hell - Victory.flac. Skipping.
+
+
+Batch-Level Outcomes
+--------------------
+- Always log a summary line at the end of a batch:
+  [INFO] Finished: X succeeded, Y failed, Z skipped
+
+- If user selects "Retry failed only":
+  [INFO] User selected: Retry failed only
+  [INFO] Retrying N failed track(s)...
+  ...
+  [INFO] Retry finished: A succeeded, B skipped (already exists)
+
+
+GUI Representation
+------------------
+- Color coding:
+  INFO    → Grey/Blue
+  SUCCESS → Green
+  WARNING → Orange
+  ERROR   → Red
+
+- Progress bar:
+  Advances on SUCCESS or FAILED
+  Skipped tracks log instantly but don’t advance the bar
+
+- Status line:
+  Shows current track outcome in real time
+  e.g. "Downloading (3/10): Two Steps From Hell - Victory"
+       then updates to "✅ Success" or "⚠️ Skipped"
