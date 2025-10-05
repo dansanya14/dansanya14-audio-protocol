@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-*.log
-*.srt
-*.flac
-*.jpg
-*.png
-.env
-.DS_Store
