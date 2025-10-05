@@ -1,0 +1,10 @@
+yt-dlp>=2025.1.1
+mutagen>=1.47.0        # for tagging metadata
+tkinterdnd2>=0.3.0     # drag-and-drop support
+Pillow>=10.0.0         # if you embed/resize thumbnails
+requests>=2.31.0       # safe to include for any web fetches
+
+
+tkinter itself ships with Python, but tkinterdnd2 is the extra package for drag‑and‑drop.
+
+ffmpeg is an external binary, not pip‑installable — the dependency check handles that.
