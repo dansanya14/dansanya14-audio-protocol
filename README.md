@@ -2,9 +2,9 @@
 
 A user-friendly media automation tool that downloads and organizes Spotify and YouTube playlists with rich metadata, FLAC conversion.
 
-==========================
+=====
  Requirements
-==========================
+=====
 
 yt-dlp>=2025.1.1
 mutagen>=1.47.0        # for tagging metadata
@@ -17,9 +17,9 @@ tkinter itself ships with Python, but tkinterdnd2 is the extra package for drag�
 
 ffmpeg is an external binary, not pip‑installable — the dependency check handles that.
 
-==========================
+=====
  Module Structure
-==========================
+=====
 
 │
 ├── main.py                # Entry point (starts GUI)
@@ -48,9 +48,9 @@ ffmpeg is an external binary, not pip‑installable — the dependency check han
 └── logs/
     └── session-YYYY-MM-DD_HHMM.log   # Auto-saved logs
 
-==========================
+=====
  Module Responsibilities
-==========================
+=====
 
 
 1. config.py: Stores defaults:
@@ -111,9 +111,9 @@ ffmpeg is an external binary, not pip‑installable — the dependency check han
     Mirrors console + GUI logs.
 
 
-==========================
+=====
  Usage  
-==========================
+=====
 	
 1. Spotify
 
@@ -133,9 +133,9 @@ ffmpeg is an external binary, not pip‑installable — the dependency check han
         Select a custom download folder.
         View logs in‑app or open saved log files.
 		
-==========================
+=====
 	High Level Flow
-==========================
+=====
 	
                 ┌──────────────────────┐
                 │   AudioProtocolApp   │
@@ -175,9 +175,9 @@ ffmpeg is an external binary, not pip‑installable — the dependency check han
    Log auto-saved (per run)                  └─────────────────────────
 
 
-==========================
+=====
  Key Connections
-==========================
+=====
 
 
     Spotify Tab
@@ -196,9 +196,9 @@ ffmpeg is an external binary, not pip‑installable — the dependency check han
 
         Status Bar: global, always visible, updated every second.
 
-==========================
+=====
  Log Outcome Taxonomy
-==========================
+=====
 
 Track-Level Outcomes
 --------------------
@@ -230,9 +230,9 @@ Batch-Level Outcomes
   [INFO] Retry finished: A succeeded, B skipped (already exists)
 
 
-==========================
+=====
  GUI Representations
-==========================
+=====
 ------------------
 - Color coding:
   INFO    → Grey/Blue
