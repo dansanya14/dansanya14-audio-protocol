@@ -1,29 +1,38 @@
-# downloader/thumbnails.py
-
 import requests
-from mutagen.flac import FLAC, Picture
+from mutagen.flac import Picture, FLAC
 import base64
 
 def extract_video_id(url: str) -> str:
+    """Naive extractor for YouTube video ID."""
     if "v=" in url:
         return url.split("v=")[-1].split("&")[0]
-    return url.split("/")[-1]
+    return url.rsplit("/", 1)[-1]
 
-def download_thumbnail(video_id: str) -> bytes | None:
-    url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.content
+def download_thumbnail(video_id: str):
+    """
+    Try to fetch the highest resolution thumbnail.
+    """
+    urls = [
+        f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
+        f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+    ]
+    for u in urls:
+        r = requests.get(u)
+        if r.status_code == 200:
+            return r.content
     return None
 
-def embed_thumbnail(flac_path: str, image_data: bytes):
-    audio = FLAC(flac_path)
-    pic = Picture()
-    pic.data = image_data
-    pic.type = 3  # Cover (front)
-    pic.mime = "image/jpeg"
-    pic.width = 1280
-    pic.height = 720
-    pic.depth = 24
-    audio["metadata_block_picture"] = [base64.b64encode(pic.write()).decode("utf-8")]
-    audio.save()
+def embed_thumbnail(file_path: str, image_data: bytes):
+    """
+    Embed thumbnail into FLAC file as cover art.
+    """
+    try:
+        audio = FLAC(file_path)
+        pic = Picture()
+        pic.type = 3  # front cover
+        pic.mime = "image/jpeg"
+        pic.data = image_data
+        audio.add_picture(pic)
+        audio.save()
+    except Exception as e:
+        print(f"[WARNING] Failed to embed thumbnail: {e}")

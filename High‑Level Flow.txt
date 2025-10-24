@@ -1,0 +1,56 @@
+                ┌──────────────────────┐
+                │   AudioProtocolApp   │
+                └─────────┬────────────┘
+                          │
+                ┌─────────┴───────────┐
+                │       Notebook       │
+                └───────┬───────┬─────┘
+                        │       │
+        ┌───────────────┘       └────────────────┐
+        ▼                                        ▼
+┌───────────────────────┐              ┌───────────────────────┐
+│     Spotify Tab       │              │     YouTube Tab       │
+└─────────┬─────────────┘              └─────────┬─────────────┘
+          │                                      │
+   [Load CSV Button]                       [URL/Query Entry]
+          │                                      │
+   parse_exportify_csv()                  resolve_youtube_url()
+          │                                      │
+   Tracks loaded into list                ┌───────────────┐
+          │                              │ is_playlist?   │
+   [Start Button]                         └───────┬───────┘
+          │                                      │
+   download_tracks()                      get_playlist_items()
+          │                                      │
+   ┌──────┴─────────┐                          [Download Button]
+   │ Pipeline Loop  │                                │
+   │  - yt-dlp      │                        download_audio()
+   │  - metadata    │                                │
+   │  - captions    │                                │
+   └──────┬─────────┘                                │
+          │                                          │
+   Progress + Status updated                 Progress + Status updated
+          │                                          │
+   Failed tracks saved (JSON)                Log auto-saved (per run)
+          │                                          │
+   Log auto-saved (per run)                  └─────────────────────────
+
+
+ Key Connections
+
+    Spotify Tab
+
+        CSV → parsed into track list → pipeline downloads each track → metadata, thumbnails, captions embedded → failed tracks persisted → logs auto‑saved.
+
+    YouTube Tab
+
+        Input (URL or query) → resolved to video(s) or playlist → each item downloaded sequentially → progress updates → logs auto‑saved.
+
+    Shared Components
+
+        Controller: manages pause/resume/cancel and progress reporting.
+
+        Logger: writes to GUI, console, and disk.
+
+        Status Bar: global, always visible, updated every second.
+

@@ -1,0 +1,113 @@
+Seamlessly download and organize audio from Spotify (via Exportify CSV) and YouTube (videos, playlists, channels — no Shorts). Enrich your library with metadata, thumbnails, and captions, all wrapped in a clean, user‑friendly GUI.
+
+dansanya14_audio_protocol/
+│
+├── main.py                # Entry point (starts GUI)
+├── config.py              # Global settings (download dir, caption lang, etc.)
+│
+├── gui/
+│   ├── app.py             # Main Tkinter/TkinterDnD2 GUI
+│   ├── controller.py      # Pause/Resume/Cancel logic
+│   ├── logger.py          # GUI log box + fan-out to console + file
+│   └── widgets.py         # Custom widgets (progress bar, status line, etc.)
+│
+├── downloader/
+│   ├── youtube.py         # YouTube resolver + download pipeline
+│   ├── spotify.py         # Spotify CSV parser + resolver
+│   ├── pipeline.py        # Unified _download_tracks() loop
+│   ├── retry.py           # Retry logic + backoff
+│   ├── metadata.py        # Tagging (title, artist, album)
+│   ├── thumbnails.py      # Download + embed YouTube thumbnails
+│   └── captions.py        # Extract + embed captions if owner-uploaded
+│
+├── utils/
+│   ├── ffmpeg.py          # ffmpeg detection + validation
+│   ├── cleaner.py         # Title cleaning, filename sanitization
+│   └── files.py           # File existence checks, safe paths
+│
+└── logs/
+    └── session-YYYY-MM-DD_HHMM.log   # Auto-saved logs
+
+Module Responsibilities
+
+1. config.py: Stores defaults:
+	DOWNLOAD_DIR
+	CAPTION_LANG = "en"
+	AUDIO_FORMAT = "flac"
+
+	User’s chosen download folder overrides DOWNLOAD_DIR.
+
+2. gui/
+		app.py:	Builds the main window, tabs for YouTube/Spotify, drag-and-drop CSV, buttons (Start, Pause, Resume, Cancel, Retry Failed).
+		
+		controller.py: 
+			should_continue()
+			paused flag
+			update_progress()
+			update_speed()
+		
+		logger.py: log_message(level, message) → fans out to console, GUI, and file.
+		
+		widgets.py: Custom progress bar, thumbnail preview, status line.
+	
+3. downloader/
+		youtube.py
+			resolve_youtube_url(query_or_link)
+			Handles video, playlist, channel (skips Shorts).
+		spotify.py
+			parse_exportify_csv(path) → returns track dicts.
+		pipeline.py
+			_download_tracks(tracks, controller, log_box)
+			Applies retry, metadata, captions, thumbnails.
+			Uses taxonomy for logging outcomes.
+		retry.py
+			retry(action, description, log_box) with exponential backoff.
+		metadata.py
+			tag_audio(file, tags) (title, artist, album).
+		thumbnails.py
+			download_thumbnail(video_id)
+			embed_thumbnail(file, image_data)
+		captions.py
+			has_manual_subs(url, lang)
+			extract_clean_captions(srt_path)
+			embed_captions(file, text).
+
+4. utils/
+		ffmpeg.py
+			get_ffmpeg_location()
+			check_ffmpeg_installed() → GUI prompt if missing.
+		cleaner.py
+			clean_title(raw) → strips junk.
+		files.py
+			file_exists(track) → prevents duplicates.
+			safe_filename(title).
+
+5. logs/
+    Auto-created per session.
+    Rotating or timestamped filenames.
+    Mirrors console + GUI logs.
+
+
+Usage
+	
+1. Spotify
+
+		Export your playlists with Exportify
+		Load the CSV into the app.
+		Hit Start to begin batch downloading.
+
+2. YouTube
+
+		Paste a video, playlist, or channel URL.
+		Or enter a search query (first result is used).
+		Hit Download.
+
+3. Controls
+
+		Pause, Resume, Cancel, Retry Failed.
+        Select a custom download folder.
+        View logs in‑app or open saved log files.
+
+
+
+

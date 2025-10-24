@@ -1,15 +1,14 @@
-# downloader/metadata.py
-
 from mutagen.flac import FLAC
-from gui.logger import log_message
 
-def tag_audio(file_path: str, metadata: dict, log_box=None):
+def tag_audio(file_path: str, tags: dict):
+    """
+    Embed basic metadata into a FLAC file.
+    tags = {"title": ..., "artist": ..., "album": ...}
+    """
     try:
         audio = FLAC(file_path)
-        audio["title"] = metadata.get("title", "")
-        audio["artist"] = metadata.get("artist", "")
-        audio["album"] = metadata.get("album", "")
+        for key, value in tags.items():
+            audio[key] = value
         audio.save()
-        log_message(log_box, f"Tagged: {metadata['title']} by {metadata['artist']}", "SUCCESS")
     except Exception as e:
-        log_message(log_box, f"Metadata tagging failed: {e}", "ERROR")
+        print(f"[WARNING] Failed to tag {file_path}: {e}")
